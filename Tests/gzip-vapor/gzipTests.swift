@@ -192,6 +192,10 @@ extension gzipTests {
         ("testClient_setsHeaderAndUncompresses_zippedResponse", testClient_setsHeaderAndUncompresses_zippedResponse),
         ("testClient_setsHeaderAndIgnores_plainResponse", testClient_setsHeaderAndIgnores_plainResponse),
         ("testServer_setsHeaderAndCompresses_gzipRequest", testServer_setsHeaderAndCompresses_gzipRequest),
-        ("testServer_noHeaderAndIgnores_plainRequest", testServer_noHeaderAndIgnores_plainRequest)
+        ("testServer_noHeaderAndIgnores_plainRequest", testServer_noHeaderAndIgnores_plainRequest),
+        ("testStream_compress_send", testStream_compress_send),
+        ("testStream_uncompress_send", testStream_uncompress_send),
+        ("testStream_compress_receive", testStream_compress_receive),
+        ("testStream_uncompress_receive", testStream_uncompress_receive)
     ]
 }

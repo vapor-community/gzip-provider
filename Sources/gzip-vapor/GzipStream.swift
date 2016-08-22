@@ -36,7 +36,7 @@ public final class GzipStream: Transport.Stream {
     }
 
     public func send(_ bytes: Bytes) throws {
-        let data = try processor.process(data: Data(bytes), isLast: false)
+        let data = try processor.process(data: Data(bytes).toNSData(), isLast: false)
         try stream.send(data.byteArray)
     }
     
@@ -49,7 +49,7 @@ public final class GzipStream: Transport.Stream {
             }
         }
         let raw = try stream.receive(max: max)
-        let data = try processor.process(data: Data(raw), isLast: stream.closed)
+        let data = try processor.process(data: Data(raw).toNSData(), isLast: stream.closed)
         if stream.closed {
             processor.close()
             self.closed = true
@@ -57,3 +57,11 @@ public final class GzipStream: Transport.Stream {
         return data.byteArray
     }
 }
+
+#if os(Linux)
+    extension Data {
+        init(_ bytes: [UInt8]) {
+            self = Data(bytes: bytes)
+        }
+    }
+#endif
