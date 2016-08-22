@@ -24,7 +24,7 @@ drop.middleware.append(GzipServerMiddleware())
 ## Swift Package Manager
 
 ```swift
-.Package(url: "https://github.com/czechboy0/gzip-vapor.git", majorVersion: 0, minor: 1)
+.Package(url: "https://github.com/czechboy0/gzip-vapor.git", majorVersion: 0, minor: 2)
 ```
 
 :gift_heart: Contributing

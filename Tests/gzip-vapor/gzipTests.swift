@@ -76,44 +76,51 @@ class gzipTests: XCTestCase {
         XCTAssertNil(response.headers["Content-Encoding"])
     }
     
-    func testStream_compress_receive() throws {
-        let raw = TestStream()
-        try raw.send(unzippedString)
-        let stream = try GzipStream(mode: .compress, stream: raw)
-        let bytes = try stream.receive(max: 2048)
-        try stream.close()
-        let responseString = bytes.base64String
-        XCTAssertEqual(responseString, zippedString)
-    }
-    
     func testStream_compress_send() throws {
         let raw = TestStream()
         let stream = try GzipStream(mode: .compress, stream: raw)
         try stream.send(unzippedString)
+        try stream.flush()
         try stream.close()
         let responseString = raw.buffer.base64String
-        XCTAssertEqual(responseString, zippedString)
-    }
-
-    func testStream_uncompress_receive() throws {
-        let raw = TestStream()
-        try raw.send(zippedString)
-        try raw.close()
-        let stream = try GzipStream(mode: .uncompress, stream: raw)
-        let bytes = try stream.receive(max: 2048)
-        try stream.close()
-        let responseString = bytes.string
-        XCTAssertEqual(responseString, unzippedString)
+        XCTAssertEqual(responseString, "H4sIAAAAAAAAA8pIzcnJVyjPL8pJUcggmp1aVJSUn1IJAAAA//8DAISpv6M9AAAA")
     }
     
     func testStream_uncompress_send() throws {
         let raw = TestStream()
         let stream = try GzipStream(mode: .uncompress, stream: raw)
-        try stream.send(zippedString)
+        try stream.send(zippedData.makeBytes())
         try stream.close()
         let responseString = raw.buffer.string
         XCTAssertEqual(responseString, unzippedString)
     }
+    
+    func testStream_compress_receive() throws {
+        let raw = TestStream()
+        try raw.send(unzippedString)
+        let stream = try GzipStream(mode: .compress, stream: raw)
+        var bytes: Data = Data()
+        while !stream.closed {
+            let newBytes = try stream.receive(max: 10)
+            bytes.append(Data(newBytes))
+        }
+        let responseString = bytes.base64String
+        XCTAssertEqual(responseString, "H4sIAAAAAAAAA8pIzcnJVyjPL8oBAAAA//9KUciAsgEAAAD//0KwAQAAAP//QrABAAAA//9CsAEAAAD//wKxU4uKkvJTAAAAAP//qwQAhKm/oz0AAAA=")
+    }
+    
+    func testStream_uncompress_receive() throws {
+        let raw = TestStream()
+        try raw.send(zippedData.makeBytes())
+        let stream = try GzipStream(mode: .uncompress, stream: raw)
+        var bytes: Data = Data()
+        while !stream.closed {
+            let newBytes = try stream.receive(max: 10)
+            bytes.append(Data(newBytes))
+        }
+        let responseString = bytes.string
+        XCTAssertEqual(responseString, unzippedString)
+    }
+    
 }
 
 //from Vapor.Transport tests

@@ -29,10 +29,9 @@ public final class GzipStream: Transport.Stream {
     }
 
     public func flush() throws {
-        //flush the processor by processing a last empty data
-        //TODO: test that this works
-        let lastData = try processor.process(data: NSData(), isLast: true)
-        try stream.send(lastData.byteArray)
+        if let tail = try processor.safeFlush() {
+            try stream.send(tail.byteArray)
+        }
         try stream.flush()
     }
 
@@ -42,8 +41,19 @@ public final class GzipStream: Transport.Stream {
     }
     
     public func receive(max: Int) throws -> Bytes {
+        if stream.closed {
+            if let tail = try processor.safeFlush() {
+                return tail.byteArray
+            } else {
+                return []
+            }
+        }
         let raw = try stream.receive(max: max)
         let data = try processor.process(data: Data(raw), isLast: stream.closed)
+        if stream.closed {
+            processor.close()
+            self.closed = true
+        }
         return data.byteArray
     }
 }
