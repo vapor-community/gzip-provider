@@ -2,6 +2,7 @@ import XCTest
 import Foundation
 import Vapor
 import HTTP
+import Transport
 @testable import gzip_vapor
 
 class gzipTests: XCTestCase {
@@ -74,6 +75,104 @@ class gzipTests: XCTestCase {
         XCTAssertEqual(responseString, unzippedString)
         XCTAssertNil(response.headers["Content-Encoding"])
     }
+    
+    func testStream_compress_send() throws {
+        let raw = TestStream()
+        let stream = try GzipStream(mode: .compress, stream: raw)
+        try stream.send(unzippedString)
+        try stream.flush()
+        try stream.close()
+        let responseString = raw.buffer.base64String
+        XCTAssertEqual(responseString, "H4sIAAAAAAAAA8pIzcnJVyjPL8pJUcggmp1aVJSUn1IJAAAA//8DAISpv6M9AAAA")
+    }
+    
+    func testStream_uncompress_send() throws {
+        let raw = TestStream()
+        let stream = try GzipStream(mode: .uncompress, stream: raw)
+        try stream.send(zippedData.makeBytes())
+        try stream.close()
+        let responseString = raw.buffer.string
+        XCTAssertEqual(responseString, unzippedString)
+    }
+    
+    func testStream_compress_receive() throws {
+        let raw = TestStream()
+        try raw.send(unzippedString)
+        let stream = try GzipStream(mode: .compress, stream: raw)
+        var bytes: Data = Data()
+        while !stream.closed {
+            let newBytes = try stream.receive(max: 10)
+            bytes.append(Data(newBytes))
+        }
+        let responseString = bytes.base64String
+        XCTAssertEqual(responseString, "H4sIAAAAAAAAA8pIzcnJVyjPL8oBAAAA//9KUciAsgEAAAD//0KwAQAAAP//QrABAAAA//9CsAEAAAD//wKxU4uKkvJTAAAAAP//qwQAhKm/oz0AAAA=")
+    }
+    
+    func testStream_uncompress_receive() throws {
+        let raw = TestStream()
+        try raw.send(zippedData.makeBytes())
+        let stream = try GzipStream(mode: .uncompress, stream: raw)
+        var bytes: Data = Data()
+        while !stream.closed {
+            let newBytes = try stream.receive(max: 10)
+            bytes.append(Data(newBytes))
+        }
+        let responseString = bytes.string
+        XCTAssertEqual(responseString, unzippedString)
+    }
+    
+}
+
+//from Vapor.Transport tests
+final class TestStream: Transport.Stream {
+    var closed: Bool
+    var buffer: Bytes
+    var timeout: Double = -1
+    // number of times flush was called
+    var flushedCount = 0
+    
+    func setTimeout(_ timeout: Double) throws {
+        self.timeout = timeout
+    }
+    
+    init() {
+        closed = false
+        buffer = []
+    }
+    
+    func close() throws {
+        if !closed {
+            closed = true
+        }
+    }
+    
+    func send(_ bytes: Bytes) throws {
+        closed = false
+        buffer += bytes
+    }
+    
+    func flush() throws {
+        flushedCount += 1
+    }
+    
+    func receive(max: Int) throws -> Bytes {
+        if buffer.count == 0 {
+            try close()
+            return []
+        }
+        
+        if max >= buffer.count {
+            try close()
+            let data = buffer
+            buffer = []
+            return data
+        }
+        
+        let data = buffer[0..<max]
+        buffer.removeFirst(max)
+        
+        return Bytes(data)
+    }
 }
 
 extension String {
@@ -93,6 +192,10 @@ extension gzipTests {
         ("testClient_setsHeaderAndUncompresses_zippedResponse", testClient_setsHeaderAndUncompresses_zippedResponse),
         ("testClient_setsHeaderAndIgnores_plainResponse", testClient_setsHeaderAndIgnores_plainResponse),
         ("testServer_setsHeaderAndCompresses_gzipRequest", testServer_setsHeaderAndCompresses_gzipRequest),
-        ("testServer_noHeaderAndIgnores_plainRequest", testServer_noHeaderAndIgnores_plainRequest)
+        ("testServer_noHeaderAndIgnores_plainRequest", testServer_noHeaderAndIgnores_plainRequest),
+        ("testStream_compress_send", testStream_compress_send),
+        ("testStream_uncompress_send", testStream_uncompress_send),
+        ("testStream_compress_receive", testStream_compress_receive),
+        ("testStream_uncompress_receive", testStream_uncompress_receive)
     ]
 }

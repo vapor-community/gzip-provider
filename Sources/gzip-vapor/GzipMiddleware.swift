@@ -28,9 +28,11 @@ public struct GzipClientMiddleware: Middleware {
         switch zipped {
         case .data(let bytes):
             response.body = .data(Array(try Data(bytes: bytes).gzipUncompressed()))
-        default:
-            //TODO: find out a way to uncompress chunks too
-            throw GzipMiddlewareError.unsupportedStreamType
+        case .chunked(let chunker):
+            response.body = .chunked({ (stream: ChunkStream) in
+                let gzipStream = try GzipStream(mode: .uncompress, stream: stream.raw)
+                try chunker(ChunkStream(stream: gzipStream))
+            })
         }
         return response
     }
@@ -56,9 +58,11 @@ public struct GzipServerMiddleware: Middleware {
         switch unzipped {
         case .data(let bytes):
             response.body = .data(Array(try Data(bytes: bytes).gzipCompressed()))
-        default:
-            //TODO: find out a way to compress chunks too
-            throw GzipMiddlewareError.unsupportedStreamType
+        case .chunked(let chunker):
+            response.body = .chunked({ (stream: ChunkStream) in
+                let gzipStream = try GzipStream(mode: .compress, stream: stream.raw)
+                try chunker(ChunkStream(stream: gzipStream))
+            })
         }
         return response
     }
