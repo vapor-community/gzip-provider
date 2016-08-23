@@ -5,6 +5,10 @@ import Foundation
 
 public final class GzipStream: Transport.Stream {
     
+    public var peerAddress: String {
+        return stream.peerAddress
+    }
+
     let mode: GzipMode
     private let processor: GzipProcessor
     let stream: Transport.Stream
