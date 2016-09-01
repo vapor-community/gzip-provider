@@ -62,6 +62,21 @@ class gzipTests: XCTestCase {
         XCTAssertEqual(response.headers["Content-Encoding"], "gzip")
     }
     
+    func testServer_noHeaderAndIgnores_overridden() throws {
+        
+        let middleware = GzipServerMiddleware(shouldGzip: { _ in false })
+        
+        let req = try Request(method: .get, uri: "http://hello.com")
+        req.headers["Accept-Encoding"] = "gzip, deflate"
+        let cannedResponse = Response(body: unzippedData)
+        let responder = TestResponder(response: cannedResponse)
+        let response = try middleware.respond(to: req, chainingTo: responder)
+        
+        let responseString = (response.body.bytes ?? []).string
+        XCTAssertEqual(responseString, unzippedString)
+        XCTAssertNil(response.headers["Content-Encoding"])
+    }
+    
     func testServer_noHeaderAndIgnores_plainRequest() throws {
         
         let middleware = GzipServerMiddleware()
@@ -195,6 +210,7 @@ extension gzipTests {
         ("testClient_setsHeaderAndUncompresses_zippedResponse", testClient_setsHeaderAndUncompresses_zippedResponse),
         ("testClient_setsHeaderAndIgnores_plainResponse", testClient_setsHeaderAndIgnores_plainResponse),
         ("testServer_setsHeaderAndCompresses_gzipRequest", testServer_setsHeaderAndCompresses_gzipRequest),
+        ("testServer_noHeaderAndIgnores_overridden", testServer_noHeaderAndIgnores_overridden),
         ("testServer_noHeaderAndIgnores_plainRequest", testServer_noHeaderAndIgnores_plainRequest),
         ("testStream_compress_send", testStream_compress_send),
         ("testStream_uncompress_send", testStream_uncompress_send),

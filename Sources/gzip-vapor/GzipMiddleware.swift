@@ -43,11 +43,18 @@ public struct GzipClientMiddleware: Middleware {
 /// 2. if so, compresses the body and sets the response header "Content-Encoding" to "gzip",
 public struct GzipServerMiddleware: Middleware {
     
-    public init() { }
+    private let shouldGzip: (_ request: Request) -> Bool
+    
+    /// The `shouldGzip` closure is asked for every request whether that request
+    /// should allow response gzipping. Returns `true` always by default.
+    public init(shouldGzip: @escaping (_ request: Request) -> Bool = { _ in true }) {
+        self.shouldGzip = shouldGzip
+    }
     
     public func respond(to request: Request, chainingTo next: Responder) throws -> Response {
         
-        guard request.headers["Accept-Encoding"]?.contains("gzip") == true else {
+        let acceptsGzip = request.headers["Accept-Encoding"]?.contains("gzip") == true
+        guard acceptsGzip && shouldGzip(request) else {
             return try next.respond(to: request)
         }
 
