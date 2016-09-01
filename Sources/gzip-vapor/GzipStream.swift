@@ -5,6 +5,10 @@ import Foundation
 
 public final class GzipStream: Transport.Stream {
     
+    public var peerAddress: String {
+        return stream.peerAddress
+    }
+    
     let mode: GzipMode
     private let processor: GzipProcessor
     let stream: Transport.Stream
@@ -30,20 +34,20 @@ public final class GzipStream: Transport.Stream {
 
     public func flush() throws {
         if let tail = try processor.safeFlush() {
-            try stream.send(tail.byteArray)
+            try stream.send(tail.byteArray())
         }
         try stream.flush()
     }
 
     public func send(_ bytes: Bytes) throws {
         let data = try processor.process(data: Data(bytes).toNSData(), isLast: false)
-        try stream.send(data.byteArray)
+        try stream.send(data.byteArray())
     }
     
     public func receive(max: Int) throws -> Bytes {
         if stream.closed {
             if let tail = try processor.safeFlush() {
-                return tail.byteArray
+                return try tail.byteArray()
             } else {
                 return []
             }
@@ -54,7 +58,23 @@ public final class GzipStream: Transport.Stream {
             processor.close()
             self.closed = true
         }
-        return data.byteArray
+        return try data.byteArray()
+    }
+}
+
+extension NSData {
+    public func toFoundationData() -> Foundation.Data {
+        #if os(Linux)
+        return Data._unconditionallyBridgeFromObjectiveC(self)
+        #else
+        return Data(referencing: self)
+        #endif
+    }
+}
+
+extension NSData {
+    func byteArray() throws -> [UInt8] {
+        return try self.toFoundationData().makeBytes()
     }
 }
 
