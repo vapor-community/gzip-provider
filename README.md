@@ -1,6 +1,6 @@
 # gzip-vapor
 
-[![Build Status](https://travis-ci.org/vapor/gzip-vapor.svg?branch=master)](https://travis-ci.org/vapor/gzip-vapor)
+[![Build Status](https://travis-ci.org/vapor/gzip-provider.svg?branch=master)](https://travis-ci.org/vapor/gzip-provider)
 ![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20OS%20X-blue.svg)
 ![Package Managers](https://img.shields.io/badge/package%20managers-SwiftPM-yellow.svg)
 
